@@ -1,7 +1,174 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const pages = ["home", "about", "services", "games", "contact"];
+const GHOST_FRAME_COUNT = 150;
+
+function GhostScrollAnimation({
+  children,
+  className = "",
+  ariaLabel = "Services scroll animation",
+  overlay,
+}) {
+  const sectionRef = useRef(null);
+  const canvasRef = useRef(null);
+  const progressTrackRef = useRef(null);
+  const progressFillRef = useRef(null);
+  const counterRef = useRef(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const canvas = canvasRef.current;
+    if (typeof window.CanvasRenderingContext2D === "undefined") return undefined;
+
+    const context = canvas.getContext("2d");
+    if (!context) return undefined;
+    const images = new Array(GHOST_FRAME_COUNT);
+    let currentFrame = 0;
+    let targetFrame = 0;
+    let renderRequest = 0;
+    let scrollRequest = 0;
+    let lastDrawnFrame = -1;
+    let lastRenderTime = 0;
+
+    const drawFrame = () => {
+      const frame = Math.round(currentFrame);
+      const image = images[frame];
+      if (image && image.complete && image.naturalWidth) {
+        if (frame !== lastDrawnFrame) {
+          const scale = Math.max(
+            canvas.width / image.naturalWidth,
+            canvas.height / image.naturalHeight
+          );
+          const width = image.naturalWidth * scale;
+          const height = image.naturalHeight * scale;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(
+            image,
+            (canvas.width - width) / 2,
+            (canvas.height - height) / 2,
+            width,
+            height
+          );
+          lastDrawnFrame = frame;
+        }
+      } else if (lastDrawnFrame === -1) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      counterRef.current.textContent = `${String(frame + 1).padStart(3, "0")} / ${GHOST_FRAME_COUNT}`;
+    };
+
+    const scheduleRender = () => {
+      if (!renderRequest) {
+        renderRequest = window.requestAnimationFrame(renderFrame);
+      }
+    };
+
+    const renderFrame = (time) => {
+      renderRequest = 0;
+      const difference = targetFrame - currentFrame;
+      const elapsed = lastRenderTime ? Math.min(time - lastRenderTime, 64) : 16.67;
+      const easing = 1 - Math.exp(-elapsed / 90);
+      lastRenderTime = time;
+
+      if (Math.abs(difference) < 0.05) {
+        currentFrame = targetFrame;
+      } else {
+        currentFrame += difference * easing;
+      }
+
+      drawFrame();
+      if (currentFrame !== targetFrame) scheduleRender();
+    };
+
+    const resizeCanvas = () => {
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(canvas.clientWidth * pixelRatio);
+      canvas.height = Math.round(canvas.clientHeight * pixelRatio);
+      lastDrawnFrame = -1;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      drawFrame();
+    };
+
+    const updateScroll = () => {
+      const sticky = canvas.parentElement;
+      const distance = Math.max(1, section.offsetHeight - sticky.clientHeight);
+      const stickyTop = parseFloat(window.getComputedStyle(sticky).top) || 0;
+      const progress = Math.min(
+        1,
+        Math.max(0, (stickyTop - section.getBoundingClientRect().top) / distance)
+      );
+
+      targetFrame = progress * (GHOST_FRAME_COUNT - 1);
+      progressFillRef.current.style.width = `${progress * 100}%`;
+      progressTrackRef.current.setAttribute("aria-valuenow", String(Math.round(progress * 100)));
+      scheduleRender();
+    };
+
+    const onScroll = () => {
+      if (!scrollRequest) {
+        scrollRequest = window.requestAnimationFrame(() => {
+          scrollRequest = 0;
+          updateScroll();
+        });
+      }
+    };
+
+    for (let index = 0; index < GHOST_FRAME_COUNT; index += 1) {
+      const image = new Image();
+      images[index] = image;
+      image.onload = scheduleRender;
+      image.src = `${process.env.PUBLIC_URL}/ghost-frames/frame-${String(index + 1).padStart(3, "0")}.jpg`;
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    updateScroll();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", resizeCanvas);
+      window.cancelAnimationFrame(renderRequest);
+      window.cancelAnimationFrame(scrollRequest);
+    };
+  }, []);
+
+  return (
+    <section
+      className={`ghost-scroll-scene ${className}`.trim()}
+      ref={sectionRef}
+      aria-label={ariaLabel}
+    >
+      <div className="ghost-sticky">
+        <canvas
+          className="ghost-canvas"
+          ref={canvasRef}
+          role="img"
+          aria-label="Cinematic gaming animation frames"
+        />
+        <div className="ghost-shade" aria-hidden="true" />
+        {overlay}
+        <div
+          className="ghost-progress-track"
+          role="progressbar"
+          aria-label="Animation progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          ref={progressTrackRef}
+        >
+          <div className="ghost-progress-fill" ref={progressFillRef} />
+        </div>
+        <span className="ghost-frame-counter" ref={counterRef}>001 / 150</span>
+        <span className="ghost-scroll-hint">SCROLL TO EXPERIENCE ↓</span>
+      </div>
+      <div className="ghost-content">{children}</div>
+    </section>
+  );
+}
 
 const getTodayDate = () => {
   const today = new Date();
@@ -20,36 +187,26 @@ const services = [
     name: "PC GAMING",
     price: "₹80",
     detail: "High-performance gaming PCs",
-    image:
-      "https://i.pinimg.com/736x/d1/d9/14/d1d914efabd1c49c4318ed7310eff0f2.jpg",
   },
   {
     name: "PS4 GAMING",
     price: "₹100",
     detail: "Console gaming with friends",
-    image:
-      "https://i.pinimg.com/1200x/46/f2/42/46f24237e05ea9d2fb80f4064225732a.jpg",
   },
   {
     name: "PS5 GAMING",
     price: "₹120",
     detail: "Next-generation gaming",
-    image:
-      "https://i.pinimg.com/736x/24/28/f0/2428f01bb5ae0a7f746ddf745571f996.jpg",
   },
   {
     name: "RACING SIMULATOR",
     price: "₹150",
     detail: "Experience realistic racing",
-    image:
-      "https://i.pinimg.com/736x/2b/c3/c8/2bc3c82014b35ce8dba996327726c4f1.jpg",
   },
   {
     name: "VR GAMING",
     price: "₹200",
     detail: "Enter a virtual world",
-    image:
-      "https://i.pinimg.com/1200x/bb/56/c3/bb56c3db04b3cf99efb6ae49cf8991fa.jpg",
   },
 ];
 
@@ -454,41 +611,44 @@ function App() {
         </nav>
       </header>
 
+      {activePage === "home" && (
+        <GhostScrollAnimation
+          className="ghost-scroll-scene--home"
+          ariaLabel="Home scroll animation"
+          overlay={
+            <section className="hero ghost-hero-overlay" id="home">
+              <div className="hero-content">
+                <p className="orange-text">PLAY. COMPETE. REPEAT.</p>
+                <div className="hero-title-group">
+                  <h1>ANYTIME</h1>
+                  <h2>GAMING CAFE</h2>
+                </div>
+                <p className="hero-description">
+                  Your next level gaming destination.
+                  Experience premium gaming setups,
+                  immersive gameplay and unforgettable competition.
+                </p>
+                <a
+                  href="#services"
+                  className="primary-btn"
+                  onClick={(event) => navigateTo(event, "services")}
+                >
+                  EXPLORE OUR SETUPS ↗
+                </a>
+              </div>
+              <div className="hero-bottom">
+                <span>01 / 05</span>
+                <span>THE GAME STARTS HERE</span>
+                <a href="#about" onClick={(event) => navigateTo(event, "about")}>
+                  SCROLL TO EXPLORE ↓
+                </a>
+              </div>
+            </section>
+          }
+        />
+      )}
+
       <main>
-        {activePage === "home" && <section className="hero" id="home">
-
-        <div className="hero-content">
-
-          <p className="orange-text">
-            PLAY. COMPETE. REPEAT.
-          </p>
-
-          <h1>ANYTIME</h1>
-
-          <h2>
-            GAMING CAFE
-          </h2>
-
-          <p className="hero-description">
-            Your next level gaming destination.
-            Experience premium gaming setups,
-            immersive gameplay and unforgettable competition.
-          </p>
-
-          <a href="#services" className="primary-btn" onClick={(event) => navigateTo(event, "services")}>
-            EXPLORE OUR SETUPS ↗
-          </a>
-
-        </div>
-
-        <div className="hero-bottom">
-          <span>01 / 05</span>
-          <span>THE GAME STARTS HERE</span>
-          <a href="#about" onClick={(event) => navigateTo(event, "about")}>SCROLL TO EXPLORE ↓</a>
-        </div>
-
-      </section>}
-
       {activePage === "about" && <section className="about section" id="about">
 
         <p className="section-label">
@@ -576,7 +736,7 @@ function App() {
 
       </section>}
 
-      {activePage === "services" && <>
+      {activePage === "services" && <GhostScrollAnimation>
       <section className="services section" id="services">
 
         <div className="section-heading">
@@ -611,24 +771,14 @@ function App() {
               onClick={(event) => navigateTo(event, "games")}
             >
 
-              <div
-                className="service-image"
-                style={{
-                  backgroundImage: `url(${service.image})`,
-                }}
-              >
-
-                <span className="service-number">
-                  0{index + 1}
-                </span>
-
-              </div>
-
               <div className="service-info">
 
-                <div>
-                  <h3>{service.name}</h3>
-                  <p>{service.detail}</p>
+                <div className="service-info-main">
+                  <span className="service-number">0{index + 1}</span>
+                  <div>
+                    <h3>{service.name}</h3>
+                    <p>{service.detail}</p>
+                  </div>
                 </div>
 
                 <div className="service-price">
@@ -732,7 +882,7 @@ function App() {
         )}
 
       </section>
-      </>}
+      </GhostScrollAnimation>}
 
       {activePage === "games" && <section className="games section" id="games">
 

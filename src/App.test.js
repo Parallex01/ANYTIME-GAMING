@@ -6,9 +6,16 @@ test('navigation switches between pages while keeping the navbar available', () 
   render(<App />);
 
   const navigation = screen.getByRole('navigation', { name: /main navigation/i });
-  expect(screen.getByRole('heading', { name: 'ANYTIME' })).toBeInTheDocument();
+  const homeAnimation = screen.getByRole('region', { name: 'Home scroll animation' });
+  expect(homeAnimation.previousElementSibling).toHaveClass('navbar');
+  expect(homeAnimation.nextElementSibling.tagName).toBe('MAIN');
+  expect(within(homeAnimation).getByRole('heading', { name: 'ANYTIME' })).toBeInTheDocument();
+  expect(within(homeAnimation).getByRole('heading', { name: 'GAMING CAFE' })).toBeInTheDocument();
+  expect(within(homeAnimation).getByRole('link', { name: /explore our setups/i })).toBeInTheDocument();
 
   fireEvent.click(within(navigation).getByRole('link', { name: 'ABOUT' }));
+  expect(screen.queryByRole('region', { name: 'Home scroll animation' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Services scroll animation' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /built for/i })).toBeInTheDocument();
   expect(window.location.hash).toBe('#about');
   expect(within(navigation).getByRole('link', { name: 'ABOUT' })).toHaveAttribute(
@@ -17,8 +24,15 @@ test('navigation switches between pages while keeping the navbar available', () 
   );
 
   fireEvent.click(within(navigation).getByRole('link', { name: 'SERVICES' }));
+  const animation = screen.getByRole('region', { name: 'Services scroll animation' });
+  expect(animation.parentElement.tagName).toBe('MAIN');
+  expect(within(animation).getByRole('img', { name: 'Cinematic gaming animation frames' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /our services/i })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /simple pricing/i })).toBeInTheDocument();
+  expect(animation.querySelectorAll('.service-image')).toHaveLength(0);
+  expect(
+    within(animation).getAllByRole('button', { name: /^View .* games$/i })
+  ).toHaveLength(5);
   expect(screen.queryByRole('heading', { name: /built for/i })).not.toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument();
 });

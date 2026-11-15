@@ -99,7 +99,7 @@ textarea {
 
 .app {
   width: 100%;
-  overflow: hidden;
+  overflow-x: clip;
 }
 
 /* NAVBAR */
@@ -160,6 +160,104 @@ textarea {
   cursor: pointer;
 }
 
+/* GHOST SCROLL ANIMATION */
+
+.ghost-scroll-scene {
+  position: relative;
+  isolation: isolate;
+}
+
+.ghost-scroll-scene--home {
+  min-height: 320vh;
+}
+
+.ghost-sticky {
+  height: calc(100vh - 78px);
+  position: sticky;
+  top: 78px;
+  z-index: 0;
+  margin-bottom: calc(-1 * (100vh - 78px));
+  overflow: hidden;
+  background: #08090b;
+}
+
+.ghost-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ghost-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.2), transparent 55%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.38), transparent 30%);
+}
+
+.ghost-sticky .ghost-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  min-height: 0;
+  background: none;
+}
+
+.ghost-hero-overlay .hero-bottom {
+  bottom: 74px;
+}
+
+.ghost-content {
+  position: relative;
+  z-index: 1;
+}
+
+.ghost-content > .services {
+  background: rgba(33, 37, 41, 0.62);
+}
+
+.ghost-content > .pricing {
+  background: rgba(33, 37, 41, 0.76);
+}
+
+.ghost-progress-track {
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  bottom: 30px;
+  height: 2px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ghost-progress-fill {
+  width: 0;
+  height: 100%;
+  background: #fb5607;
+}
+
+.ghost-frame-counter {
+  position: absolute;
+  right: 7%;
+  bottom: 42px;
+  z-index: 2;
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+.ghost-scroll-hint {
+  position: absolute;
+  right: 3%;
+  bottom: 30px;
+  z-index: 2;
+  color: #ddd;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+}
+
 /* HERO */
 
 .hero {
@@ -203,6 +301,17 @@ textarea {
   opacity: 0;
   transform: translateY(22px);
   animation: fadeUp 0.8s ease 0.25s forwards;
+}
+
+.hero-title-group {
+  display: grid;
+  grid-template-columns: max-content;
+  width: max-content;
+  max-width: 100%;
+}
+
+.hero-title-group h2 {
+  justify-self: end;
 }
 
 .hero h2 {
@@ -573,8 +682,8 @@ textarea {
 .service-card {
   width: 100%;
   padding: 0;
-  background: #292c31;
-  border: 1px solid #393c42;
+  background: rgba(20, 22, 26, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   color: var(--white);
   font: inherit;
   text-align: left;
@@ -593,20 +702,17 @@ textarea {
   outline-offset: 4px;
 }
 
-.service-image {
-  height: 230px;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
 .service-number {
-  position: absolute;
-  top: 15px;
-  left: 20px;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 25px;
   font-weight: 800;
+  color: var(--orange);
+}
+
+.service-info-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .service-info {
@@ -1232,6 +1338,12 @@ textarea {
     padding: 0 6%;
   }
 
+  .ghost-sticky {
+    height: calc(100vh - 68px);
+    top: 68px;
+    margin-bottom: calc(-1 * (100vh - 68px));
+  }
+
   .menu-toggle {
     display: block;
   }
@@ -1258,6 +1370,9 @@ textarea {
     padding: 70px 7% 100px;
   }
 
+  .ghost-hero-overlay .primary-btn {
+    margin-left: 0;
+  }
   .hero-image {
     height: 300px;
     width: 100%;
@@ -1324,10 +1439,6 @@ textarea {
 
   .section {
     padding: 75px 7%;
-  }
-
-  .service-image {
-    height: 190px;
   }
 
   .games-grid {
@@ -1439,10 +1550,6 @@ textarea {
 
   .service-grid {
     grid-template-columns: 1fr;
-  }
-
-  .service-image {
-    height: 220px;
   }
 
   .games-grid {
